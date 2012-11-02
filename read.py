@@ -5,7 +5,7 @@ import wave
 from array import array
 from collections import defaultdict
 from struct import unpack
-from sys import argv
+from sys import argv, exit
 from time import sleep
 from Tkinter import BOTH, Canvas, Tk, YES
 
@@ -16,17 +16,20 @@ par = ['''    Well, here's a story for you: Sarah Perry was a veterinary nurse w
 
 
 def init():
-    global w, p, root, canvas, indicies, audio, stream, recordDir, micName
+    global w, p, root, canvas, indicies, audio, stream, recordDir, micName, chunk
     w = 0
     p = 0
     root, canvas = setUpCanvas()
-    indicies = [[4 for i in range(len(par[j].split())+1)] for j in range(len(par))]
+    indicies = [[4 for i in range(len(par[j].split())+1)] 
+            for j in range(len(par))]
     for j in range(0, len(indicies)):
         for i in range(1, len(indicies[j])):
-            indicies[j][i] = indicies[j][i-1] + len(par[j].split()[i-1]) + 1
+            indicies[j][i] = indicies[j][i-1] + \
+                    len(par[j].split()[i-1]) + 1
     audio = pyaudio.PyAudio()
     recordDir = os.path.join(os.path.dirname(__file__), 'recordings')
     micName = '/dev/dsp2'
+    chunk = 1024
 
 def setUpCanvas():
     root = Tk()
@@ -55,7 +58,9 @@ def highlight(evt):
     global w, p
     font = 'Courier'
     canvas.delete('all')
-    canvas.create_text(325, 240, width=630, text=par[p][:indicies[p][w]]+unichr(160)*(len(par[p].split()[w]))+' '+par[p][indicies[p][w+1]:], fill='black', font=(font, '18', 'bold'))
+    canvas.create_text(325, 240, width=630, 
+            text=par[p][:indicies[p][w]]+unichr(160)*(len(par[p].split()[w]))+' '+par[p][indicies[p][w+1]:],
+            fill='black', font=(font, '18', 'bold'))
     only = '    '
     for i in range(len(par[p].split())):
         if i == w:
@@ -70,7 +75,8 @@ def highlight(evt):
         color = 'green'
     except:
         color = 'red'
-    canvas.create_text(325, 240, width=630, text=only, fill=color, font=(font, '18', 'bold'))
+    canvas.create_text(325, 240, width=630, text=only, 
+            fill=color, font=(font, '18', 'bold'))
     w += 1
     if w > len(indicies[p])-2:
         w = 0
@@ -89,7 +95,9 @@ def dehighlight(evt):
     elif par[p].split()[w] == '-': w -= 1    # hypens are not words
     font = 'Courier'
     canvas.delete('all')
-    canvas.create_text(325, 240, width=630, text=par[p][:indicies[p][w-1]]+unichr(160)*(len(par[p].split()[w-1]))+' '+par[p][indicies[p][w]:], fill='black', font=(font, '18', 'bold'))
+    canvas.create_text(325, 240, width=630, 
+            text=par[p][:indicies[p][w-1]]+unichr(160)*(len(par[p].split()[w-1]))+' '+par[p][indicies[p][w]:], 
+            fill='black', font=(font, '18', 'bold'))
     only = '    '
     for i in range(len(par[p].split())):
         if i == w-1:
@@ -104,7 +112,8 @@ def dehighlight(evt):
         color = 'green'
     except:
         color = 'red'
-    canvas.create_text(325, 240, width=630, text=only, fill=color, font=(font, '18', 'bold'))
+    canvas.create_text(325, 240, width=630, text=only, 
+            fill=color, font=(font, '18', 'bold'))
 
 def play(evt):
     fn = os.path.join(recordDir, '%d.%03d.wav' % (p, w))
@@ -112,14 +121,13 @@ def play(evt):
         wf = wave.open(fn, 'rb')
     except IOError:
         return
-    outstream = audio.open(format=pyaudio.paInt16,#audio.get_format_from_width(wf.getsampwidth()),
-            channels=1,#wf.getnchannels(), 
-            rate=44100,#wf.getframerate(), 
-            output=True)
-    data = wf.readframes(1024)
+    outstream = audio.open(format=audio.get_format_from_width(wf.getsampwidth()), 
+            channels=wf.getnchannels(), 
+            rate=wf.getframerate(), output=True)
+    data = wf.readframes(chunk)
     while data:
         outstream.write(data)
-        data = wf.readframes(1024)
+        data = wf.readframes(chunk)
     outstream.close()
 
 def delete(evt):
@@ -134,7 +142,7 @@ def delete(evt):
         return
 
 def quit(evt):
-    stream.write(os.urandom(1024))  # to stop the stream from blocking
+    stream.write(os.urandom(chunk))  # to stop the stream from blocking
     stream.close()
     audio.terminate()
     exit()
@@ -147,15 +155,15 @@ def parseArgs():
     options = 'r:m:'
     long_options = ['record-dir=', 'mic-name=']
     try:
-        optlist, args = getopt.getopt(sys.argv[1:], options, long_options)
+        optlist, args = getopt.getopt(argv[1:], options, long_options)
     except getopt.GetoptError as err:
         print str(err)
         usage()
         sys.exit(2)
-    for opt, arg in opts:
-        if o in ('-r', '--record-dir'):
+    for opt, arg in optlist:
+        if opt in ('-r', '--record-dir'):
             recordDir = os.path.join(recordDir, arg)
-        elif o in ('-m', '--mic-name'):
+        elif opt in ('-m', '--mic-name'):
             micName = arg
         else:
             assert False, 'unhandled option'
@@ -174,14 +182,14 @@ def main():
     parseArgs()
     index = getDeviceIndexByName(micName)
     stream = audio.open(format=pyaudio.paInt16, channels=1, rate=44100,
-            input=True, frames_per_buffer=1024, input_device_index=index)
+            input=True, frames_per_buffer=chunk, input_device_index=index)
     highlight(None) # jump to first word
     threshold = 900
     recording = 0
     while True:
         canvas.update()
         try:
-            data = stream.read(1024)
+            data = stream.read(chunk)
         except IOError:
             print 'Lost the microphone!'
             quit(None)
@@ -201,7 +209,7 @@ def main():
                     saveToFile(''.join(all), fn)
                     stream.close()
                     stream = audio.open(format=pyaudio.paInt16, channels=1, rate=44100,
-                            input=True, frames_per_buffer=1024, input_device_index=index)
+                            input=True, frames_per_buffer=chunk, input_device_index=index)
                     highlight(None)
                 else:
                     all = list()
