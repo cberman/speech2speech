@@ -116,7 +116,7 @@ def dehighlight(evt):
             fill=color, font=(font, '18', 'bold'))
 
 def play(evt):
-    fn = os.path.join(recordDir, '%d.%03d.wav' % (p, w))
+    fn = os.path.join(recordDir, '%d.%03d.wav' % (p, w - 1))
     try:
         wf = wave.open(fn, 'rb')
     except IOError:
@@ -131,7 +131,7 @@ def play(evt):
     outstream.close()
 
 def delete(evt):
-    fn = os.path.join(recordDir, '%d.%03d.wav' % (p, w))
+    fn = os.path.join(recordDir, '%d.%03d.wav' % (p, w - 1))
     try:
         wf = wave.open(fn, 'rb')
         wf.close()
@@ -142,7 +142,6 @@ def delete(evt):
         return
 
 def quit(evt):
-    stream.write(os.urandom(chunk))  # to stop the stream from blocking
     stream.close()
     audio.terminate()
     exit()
@@ -163,6 +162,8 @@ def parseArgs():
     for opt, arg in optlist:
         if opt in ('-r', '--record-dir'):
             recordDir = os.path.join(recordDir, arg)
+            if not os.path.exists(recordDir):
+                os.makedirs(recordDir)
         elif opt in ('-m', '--mic-name'):
             micName = arg
         else:
@@ -180,6 +181,8 @@ def main():
     global stream
     init()
     parseArgs()
+    print recordDir
+    print micName
     index = getDeviceIndexByName(micName)
     stream = audio.open(format=pyaudio.paInt16, channels=1, rate=44100,
             input=True, frames_per_buffer=chunk, input_device_index=index)
@@ -191,11 +194,10 @@ def main():
         try:
             data = stream.read(chunk)
         except IOError:
-            print 'Lost the microphone!'
             quit(None)
         L = unpack('<' + ('h'*(len(data) / 2)), data)
         L = array('h', L)
-        #print max(L)
+        print max(L)
         if max(L) > threshold:
             if not recording:
                 recording = 40
@@ -206,13 +208,13 @@ def main():
             if not recording:
                 fn = os.path.join(recordDir, '%d.%03d.wav' % (p, w-1))
                 if os.path.exists(fn):
+                    all = list()
+                else:
                     saveToFile(''.join(all), fn)
                     stream.close()
                     stream = audio.open(format=pyaudio.paInt16, channels=1, rate=44100,
                             input=True, frames_per_buffer=chunk, input_device_index=index)
                     highlight(None)
-                else:
-                    all = list()
     root.mainloop()
 
 if __name__ == '__main__': main()
