@@ -106,7 +106,7 @@ def dehighlight(evt):
             only += unichr(160)*len(par[p].split()[i])
         only += ' '
     try:
-        fn = os.path.join(recordDir, '%d.%03d.wav' % (p, w))
+        fn = os.path.join(recordDir, '%d.%03d.wav' % (p, w - 1))
         #print fn
         wf = wave.open(fn, 'rb')
         color = 'green'
