@@ -1,5 +1,6 @@
 CS Docs/*
 recordings/*
+data/*
 *.pyc
 lines.sh
 utils/*
