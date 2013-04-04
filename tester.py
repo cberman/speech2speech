@@ -1,7 +1,7 @@
 import pyaudio, wave
 import cmath
 from array import array
-from math import pi
+from math import cos, pi
 from struct import unpack
 from time import sleep
 
@@ -39,6 +39,15 @@ def fft(seq):
             first[k] = t + cmath.exp(-2j*pi * k/N) * second[k]
             second[k] = t - cmath.exp(-2j*pi * k/N) * second[k]
         return first + second
+
+def hamming(n, N):
+    return .53836 + .46164*cos(2*pi*(n-N/2)/(N-1))
+
+def stft(seq):
+    periods = (0,) * 512 + tuple(reduce(lambda a, b: a + b, cL)) + (0,) * 512
+    periods = [periods[i-512:i+512] for i in range(512, len(periods), 512)]
+    periods = [[i[j] * hamming(j, len(i)) for j in range(len(i))] for i in periods]
+    #return [sum(periods(i) * cmath.exp(-2j)]
 
 cw = wave.open('recordings/collin/0.010.wav', 'rb')
 collin = list()
