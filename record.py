@@ -1,6 +1,6 @@
 import getopt
 import os
-import pyaudio
+import audio
 import wave
 from array import array
 from collections import defaultdict
@@ -11,7 +11,7 @@ from Tkinter import BOTH, Canvas, Tk, YES
 from util import par
 
 def init():
-    global w, p, root, canvas, indicies, audio, stream, recordDir, micName, chunk
+    global w, p, root, canvas, indicies, stream, recordDir, micName
     w = 0
     p = 0
     root, canvas = setUpCanvas()
@@ -21,10 +21,8 @@ def init():
         for i in range(1, len(indicies[j])):
             indicies[j][i] = indicies[j][i-1] + \
                     len(par[j].split()[i-1]) + 1
-    audio = pyaudio.PyAudio()
     recordDir = os.path.join(os.path.dirname(__file__), 'recordings')
     micName = '/dev/dsp2'
-    chunk = 1024
 
 def setUpCanvas():
     root = Tk()
@@ -39,15 +37,6 @@ def setUpCanvas():
     root.bind('<Down>', lambda evt: [highlight(None) for i in range(5)])
     root.bind('<Up>', lambda evt: [dehighlight(None) for i in range(5)])
     return root, canvas
-
-def getDeviceIndexByName(name):
-    global audio
-    if not audio:
-        audio = pyaudio.PyAudio()
-    num = audio.get_device_count()
-    devices = [audio.get_device_info_by_index(i) for i in range(num)]
-    devices = map(lambda device: device['name'], devices)
-    return devices.index(name)
 
 def highlight(evt):
     global w, p
@@ -112,18 +101,7 @@ def dehighlight(evt):
 
 def play(evt):
     fn = os.path.join(recordDir, '%d.%03d.wav' % (p, w - 1))
-    try:
-        wf = wave.open(fn, 'rb')
-    except IOError:
-        return
-    outstream = audio.open(format=audio.get_format_from_width(wf.getsampwidth()), 
-            channels=wf.getnchannels(), 
-            rate=wf.getframerate(), output=True)
-    data = wf.readframes(chunk)
-    while data:
-        outstream.write(data)
-        data = wf.readframes(chunk)
-    outstream.close()
+    audio.play(fn)
 
 def delete(evt):
     fn = os.path.join(recordDir, '%d.%03d.wav' % (p, w - 1))
@@ -137,7 +115,6 @@ def delete(evt):
         return
 
 def quit(evt):
-    stream.close()
     audio.terminate()
     exit()
 
@@ -164,35 +141,22 @@ def parseArgs():
         else:
             assert False, 'unhandled option'
 
-def saveToFile(data, fn):
-    wf = wave.open(fn, 'wb')
-    wf.setnchannels(1)
-    wf.setsampwidth(audio.get_sample_size(pyaudio.paInt16))
-    wf.setframerate(44100)
-    wf.writeframes(data)
-    wf.close()
-
 def main():
-    global stream
     init()
     parseArgs()
-    print recordDir
-    print micName
-    index = getDeviceIndexByName(micName)
-    stream = audio.open(format=pyaudio.paInt16, channels=1, rate=44100,
-            input=True, frames_per_buffer=chunk, input_device_index=index)
+    audio.initAudio(audio.getDeviceIndexByName(micName))
     highlight(None) # jump to first word
     threshold = 900
     recording = 0
     while True:
         canvas.update()
         try:
-            data = stream.read(chunk)
+            data = audio.getChunk()
         except IOError:
             quit(None)
         L = unpack('<' + ('h'*(len(data) / 2)), data)
         L = array('h', L)
-        print max(L)
+        # print max(L)
         if max(L) > threshold:
             if not recording:
                 recording = 40
@@ -205,10 +169,8 @@ def main():
                 if os.path.exists(fn):
                     all = list()
                 else:
-                    saveToFile(''.join(all), fn)
-                    stream.close()
-                    stream = audio.open(format=pyaudio.paInt16, channels=1, rate=44100,
-                            input=True, frames_per_buffer=chunk, input_device_index=index)
+                    audio.saveToFile(''.join(all), fn)
+                    audio.restream()
                     highlight(None)
     root.mainloop()
 
