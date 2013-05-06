@@ -34,6 +34,7 @@ def setUpCanvas():
     root.bind('<Left>', dehighlight)
     root.bind('<space>', play)
     root.bind('<d>', delete)
+    root.bind('<Delete>', delete)
     root.bind('<Down>', lambda evt: [highlight(None) for i in range(5)])
     root.bind('<Up>', lambda evt: [dehighlight(None) for i in range(5)])
     return root, canvas
