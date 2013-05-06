@@ -15,6 +15,7 @@ def play(fn):
     try:
         wf = wave.open(fn, 'rb')
     except IOError:
+        print "File %s not found" % fn
         return
     outstream = audio.open(format=audio.get_format_from_width(wf.getsampwidth()),
             channels=wf.getnchannels(),
@@ -23,7 +24,7 @@ def play(fn):
     while data:
         outstream.write(data)
         data = wf.readframes(chunk)
-    outsream.close()
+    outstream.close()
 
 def saveToFile(data, fn):
     wf = wave.open(fn, 'wb')
@@ -33,12 +34,13 @@ def saveToFile(data, fn):
     wf.writeframes(data)
     wf.close()
 
-def initAudio(index):
-    global audio, chunk, stream
+def initAudio(index=None):
+    global audio, chunk, instream, _index
     audio = pyaudio.PyAudio()
     chunk = 1024
-    stream = audio.open(format=pyaudio.paInt16, channels=1, rate=44100,
-            input=True, frames_per_buffer=chunk, input_device_index=index)
+    if index:
+        _index = index
+        restream()
 
 def restream():
     global stream
@@ -46,7 +48,7 @@ def restream():
         stream.close()
     except: pass
     stream = audio.open(format=pyaudio.paInt16, channels=1, rate=44100,
-            input=True, frames_per_buffer=chunk, input_device_index=index)
+            input=True, frames_per_buffer=chunk, input_device_index=_index)
 
 def getChunk():
     return stream.read(chunk)
