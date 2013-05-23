@@ -28,7 +28,7 @@ def get_pronunciation(sent):
             else:
                 for num in number_pron(word).split():
                     prons.append(pron_dict[num][0])
-        elif search(r'^-?[0-9]*.?[0-9]+$', word):
+        elif search(r'^-?[0-9]*\.?[0-9]+$', word):
             for num in number_pron(word).split():
                 prons.append(pron_dict[num][0])
         elif search(r'^\$[0-9]+', word):
