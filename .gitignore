@@ -4,3 +4,6 @@ data/*
 *.pyc
 lines.sh
 utils/*
+.RData
+.Rhistory
+Praat Pictures/*
