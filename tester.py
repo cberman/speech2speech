@@ -2,7 +2,7 @@ import pyaudio, wave
 import cmath
 from array import array
 from math import cos, pi
-from struct import unpack
+from struct import pack, unpack
 from time import sleep
 
 if __name__ != '__main__': raise ImportError("tester.py is designed to be run in interactive mode, not imported")
@@ -79,10 +79,38 @@ def repeat(person=collin, times=5, indicies=None, delay=.1, inbetween=.5):
     indicies = indicies or range(len(person))
     for i in indicies:
         print i
-        for t in range(times):
+        for t in xrange(times):
             stream.write(person[i])
             sleep(delay)
             restream()
         sleep(inbetween)
+
+yellow = ''
+yw = wave.open('recordings/katie/0.096.wav', 'rb')
+data = yw.readframes(1024)
+while data:
+    yellow += data
+    data = yw.readframes(1024)
+yellownums = unpack('<'+'h'*(len(yellow)/2), yellow)
+hamyellownums = list()
+for i in xrange(len(yellownums)):
+    hamyellownums.append(hamming(i, len(yellownums))*yellownums[i])
+hamyellownums = map(int, hamyellownums)
+hamyellow = pack('<'+'h'*len(hamyellownums), *hamyellownums)
+yw.close()
+
+bowl = ''
+bw = wave.open('recordings/katie/0.075.wav', 'rb')
+data = bw.readframes(1024)
+while data:
+    bowl += data
+    data = bw.readframes(1024)
+bowlnums = unpack('<'+'h'*(len(bowl)/2), bowl)
+hambowlnums = list()
+for i in xrange(len(bowlnums)):
+    hambowlnums.append(hamming(i, len(bowlnums))*bowlnums[i])
+hambowlnums = map(int, hambowlnums)
+hambowl = pack('<'+'h'*len(hambowlnums), *hambowlnums)
+bw.close()
 
 restream()
